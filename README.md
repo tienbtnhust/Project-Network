@@ -2,9 +2,9 @@
 > Online chess game written in C, using sockets, threads, dynamic memory and more
 
 ## Group Members
-Le Thanh Hai - 20184254
-Bui Thuc Nguyen Tien - 20180180
-Le Ba Vinh - 20184331
+Le Thanh Hai - 20184254 <br>
+Bui Thuc Nguyen Tien - 20180180 <br>
+Le Ba Vinh - 20184331 <br>
 
 
 ## Build
@@ -28,4 +28,5 @@ Le Ba Vinh - 20184331
 ```
 
 ## How to move
+```
 > current position-next position (Ex: a2-a3)
