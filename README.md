@@ -5,6 +5,7 @@
 Le Thanh Hai - 20184254 <br>
 Bui Thuc Nguyen Tien - 20180180 <br>
 Le Ba Vinh - 20184331 <br>
+Tangi Jean Francis Le Gac - 2021T011 <br>
 
 
 ## Build
