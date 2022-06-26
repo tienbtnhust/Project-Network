@@ -1,0 +1,15 @@
+pthread_mutex_lock(&general_mutex); // Unecesary?
+     // Create thread if we have no user waiting
+     if (player_is_waiting == 0) {
+       printf("Connected player, creating new game room...\n");
+       pthread_create(&tid[0], NULL, &game_room, &client_socket);
+       pthread_mutex_unlock(&general_mutex); // Unecesary?
+     }
+     // If we've a user waiting join that room
+     else {
+       // Send user two signal
+       printf("Connected player, joining game room... %d\n", client_socket);
+       challenging_player = client_socket;
+       pthread_mutex_unlock(&general_mutex); // Unecesary?
+       pthread_cond_signal(&player_to_join);
+     }

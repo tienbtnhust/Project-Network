@@ -1,0 +1,18 @@
+void* join_room(playerID){
+  user thisplayer = playersList[playerID];
+  int i;
+  int count = 0;
+  char buffer[1024];
+  bzero(buffer,1024);
+  for (i=0;i<numOfRoom;++i)
+  if (roomList[i].isExist){
+    strcat(buffer,roomList[i].infor);
+    strcat(buffer,"\n");
+  }
+  send(thisplayer.socket,buffer,1024,0);
+
+  recv(thisplayer.socket,buffer,1024,0);
+  int choice;
+  sscanf(buffer,"%d",&choice);
+  start_game(choice);
+}
