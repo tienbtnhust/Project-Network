@@ -15,16 +15,32 @@ void readData(){
     }
     fclose(f);
 }
-void saveData(user newUser){
+void appendData(user newUser){
     FILE* f = fopen("userdata.txt","a");
     fprintf(f,"%s\n",convertDatatoString(newUser));
     fclose(f);
+}
+void saveData(){
+    FILE* f = fopen("userdata.txt","w");
+    for (int i=0;i<numUsers;++i){
+        fprintf(f,"%s\n",convertDatatoString(Data[i]));
+        //printf("%d - %s\n",i,convertDatatoString(Data[i]));
+    }
+    fclose(f);
+}
+void changeElo(user loginData){
+    for (int i=0;i<numUsers;++i){
+        user userData = Data[i];
+        if (strcmp(userData.username,loginData.username) == 0 && strcmp(userData.password,loginData.password) ==0)
+            Data[i] = loginData;    
+    }
+    saveData();
 }
 int addNewUser(user newUser){
     for (int i=0;i<numUsers;++i)
      if (strcmp(newUser.username,Data[i].username)==0) return 0;
     Data[numUsers++] = newUser;
-    saveData(newUser);
+    appendData(newUser);
     return 1;
 }
 user getDataFromUserNameAndPassWord(user loginData){

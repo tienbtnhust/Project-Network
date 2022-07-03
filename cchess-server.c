@@ -534,6 +534,8 @@ int findNewRoom(){
 }
 void* lobby(int playerID){
   int player = playersList[playerID].socket;
+  user data = playersList[playerID];
+  send(player,convertDatatoString(data),2048,0);
   char buffer[2048];
   bzero(buffer,2048);
   buffer[0] = '\0';
@@ -603,10 +605,11 @@ void* login(void* client_socket){
      // Create thread if we have no user waiting
   //printf("Player 1: %d",player_is_waiting);
   data.socket = player;
+  //data.elo += 1000;
+  //changeElo(data);
   int playerID = numOfPlayer;
   playersList[playerID]  = data;
   numOfPlayer++;
-  send(player,convertDatatoString(data),2048,0);
   lobby(playerID);
 }
 int main( int argc, char *argv[] ) {
