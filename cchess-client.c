@@ -7,9 +7,10 @@
 #include <netinet/in.h>
 
 #include <string.h>
-
+#include "checkLogin.c"
 #include "board.c"
-
+#define MAX_LENGTH_USER_NAME 20
+#define MAX_LENGTH_PASS_WORD 16
 #define RED   "\x1B[31m"
 #define RESET "\x1B[0m"
 #define GREEN  "\x1B[32m"
@@ -92,13 +93,57 @@ void * on_signal(void * sockfd) {
     bzero(buffer, 64);
   }
 }
+void CreateRoom(int sockfd){
+  char buffer[10];
+  recv(sockfd,buffer,9,0);
+  printf("Create New Room\nRoom ID: %s\n",buffer);
+  printf("Waiting For Player ... \n");
+}
+void JoinRoom(int sockfd){
+  char buffer[1000];
+  recv(sockfd,buffer,1000,0);
+  printf("Room List:\n%s",buffer);
+  int roomID;
+  scanf("%d",&roomID);
+  sprintf(buffer,"%d",roomID);
+  send(sockfd,buffer,9,0);
+  printf("Start Playing \n");
+}
+void JoinOrCreateRoom(int sockfd){
+  int res =0;
+  while (res!=1 && res !=2){
+    printf("1. Join Room\n");
+    printf("2. Create Room\n");
+    scanf("%d",&res);
+  }
+  char c[2];
+  sprintf(c,"%d",res);
+  send(sockfd,c,1,0);
+  if (res == 1) JoinRoom(sockfd);
+  else CreateRoom(sockfd);
+}
+void Lobby(int sockfd){
+  int readsize;
+  char buffer[2048];
+  readsize = recv(sockfd, buffer,2048,0);
+  if (readsize == -1){
+    printf("[-] Disconnect\n");
+    exit(0);
+  }
+  user data = convertStringtoData(buffer);
+  printf("UserName: %s\n",data.name);
+  printf("Rank: %s\n",rankNames[getRank(data.elo)]);
+  printf("Elo : %d\n",data.elo);  
+  JoinOrCreateRoom(sockfd);
+}
+
 
 int main(int argc, char *argv[]) {
    int sockfd, portno, n;
    struct sockaddr_in serv_addr;
    struct hostent * server;
 
-   setlocale(LC_ALL, "en_US.UTF-8");
+   //setlocale(LC_ALL, "en_US.UTF-8");
    char buffer[64];
 
    if (argv[2] == NULL) {
@@ -142,6 +187,19 @@ int main(int argc, char *argv[]) {
    pthread_t tid[1];
 
    // Response thread
+   while (1){
+       user* data = loginOrRegister();
+       char* str = convertDatatoString(*data);
+       send(sockfd,str,2048,0);
+       char buffer[2048];
+       recv(sockfd,buffer,1,0);
+       if (buffer[0] == '0') printf("NOT OK!\n");
+       else {
+          break;
+       }
+  }
+   Lobby(sockfd); 
+   // Response thread
    pthread_create(&tid[0], NULL, &on_signal, &sockfd);
 
    while (1) {
@@ -150,12 +208,10 @@ int main(int argc, char *argv[]) {
 
      /* Send message to the server */
      n = write(sockfd, buffer, strlen(buffer));
-
      if (n < 0) {
         perror("ERROR writing to socket");
         exit(1);
      }
    }
-
    return 0;
 }

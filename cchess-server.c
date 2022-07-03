@@ -1,7 +1,3 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-
 #include <netdb.h>
 #include <netinet/in.h>
 
@@ -11,21 +7,64 @@
 #include <wchar.h>
 #include <locale.h>
 #include <signal.h>
-
+#include "database.c"
 #include "board.c"
-
-#define PORT 8080;
-
+#define PORT 6000;
+typedef struct roomdata {
+  int roomID ;
+  int player_is_waiting;
+  int challenging_player;
+  int state;
+} roomdata;
 // Waiting player conditional variable
 pthread_cond_t player_to_join;
 pthread_mutex_t general_mutex;
-
-bool is_diagonal(int, int);
-
-// Match player
 int challenging_player = 0;
 int player_is_waiting = 0;
 
+pthread_t tid[100];
+user playersList[100000];
+roomdata* roomList[100000];
+int numOfPlayer;
+int numOfRoom;
+void init(roomdata* room,int player){
+  room->state = 0;
+  room->player_is_waiting = player;
+  room->challenging_player = -1;
+}
+void join(roomdata* room,int player){
+    if (room->state == -1) init(room,player);
+    else {
+      room->challenging_player = player;
+      room->state = 1;
+    }
+  }
+void clearroom(roomdata* room){
+  room->state = -1;
+  room->player_is_waiting = 0;
+  room->challenging_player = 0; 
+}
+char* getInfor(roomdata * room){
+  char* infor = (char*)malloc(sizeof(char) * 100); 
+  char state[6];
+  if (room->state == 0) strcpy(state,"ready");
+  else strcpy(state,"full");
+  sprintf(infor,"%d %s %s\n",room->roomID,rankNames[getRank(playersList[room->player_is_waiting].elo)],state);
+  return infor;
+}
+char* getAllRoomInfor(){
+  int i;
+  char * allInfor = (char*) malloc(sizeof(char) * 1000);
+  for (i=0;i<numOfRoom;++i){
+    roomdata* room = roomList[i];
+    if (room->state != -1){
+      char* infor = getInfor(room);
+      strcat(allInfor,infor);
+      free(infor);
+    }
+  }
+  return allInfor;
+}
 void move_piece(wchar_t ** board, int * move) {
   // Move piece in board from origin to dest
   board[move[2]][move[3]] = board[*move][move[1]];
@@ -239,11 +278,9 @@ bool is_move_valid(wchar_t ** board, int player, int team, int * move) {
   int * piece_team = (int *)malloc(sizeof(int *));
   int * x_moves = (int *)malloc(sizeof(int *));
   int * y_moves = (int *)malloc(sizeof(int *));
-
   *piece_team = get_piece_team(board, *(move), move[1]);
   *x_moves = getManitud(*move, move[2]);
   *y_moves = getManitud(move[1], move[3]);
-
   // General errors
   if (board[*(move)][move[1]] == 0) {
     send(player, "e-08", 4, 0);
@@ -371,28 +408,29 @@ bool is_move_valid(wchar_t ** board, int player, int team, int * move) {
   return true;
 }
 
-void * game_room(void *client_socket) {
+void * game_room(int roomID) {
   /* If connection is established then start communicating */
-  int player_one = *(int *)client_socket;
+  roomdata* room = roomList[roomID];
+  int player_one  = playersList[room->player_is_waiting].socket;//= *(int *)client_socket;
   int n, player_two;
   char buffer[64];
   int * move = (int *)malloc(sizeof(int)*4);
-
   // Create a new board
   wchar_t ** board = create_board();
   char * one_dimension_board = create_od_board();
   initialize_board(board);
 
-  player_is_waiting = 1; // Set user waiting
+  //player_is_waiting = 1; // Set user waiting
 
-  pthread_mutex_lock(&general_mutex); // Wait for player two
-  pthread_cond_wait(&player_to_join, &general_mutex); // Wait for player wants to join signal
+  //pthread_mutex_lock(&general_mutex); // Wait for player two
+  //pthread_cond_wait(&player_to_join, &general_mutex); // Wait for player wants to join signal
 
   // TODO lock assigning player mutex
-  player_two = challenging_player; // Asign the player_two to challenging_player
+  player_two = playersList[room->challenging_player].socket; // Asign the player_two to challenging_player
+  printf("Room %d :\nPlayer One: %d\nPlayer Two: %d\n",roomID,player_one,room->challenging_player);
   player_is_waiting = 0; // Now none is waiting
 
-  pthread_mutex_unlock(&general_mutex); // Unecesary?
+  //pthread_mutex_unlock(&general_mutex); // Unecesary?
 
   if (send(player_one, "i-p1", 4, 0) < 0) {
      perror("ERROR writing to socket");
@@ -407,7 +445,6 @@ void * game_room(void *client_socket) {
 
   // Broadcast the board to all the room players
   broadcast(board, one_dimension_board, player_one, player_two);
-
   sleep(1);
 
   bool syntax_valid = false;
@@ -432,11 +469,11 @@ void * game_room(void *client_socket) {
       printf("Player one (%d) move: %s\n", player_one, buffer);
 
       syntax_valid = is_syntax_valid(player_one, buffer);
-
+      if (syntax_valid){
       translate_to_move(move, buffer); // Convert to move
-
       // TODO
       move_valid = is_move_valid(board, player_one, 1, move);
+      }
     }
 
     printf("Player one (%d) made move\n", player_one);
@@ -464,7 +501,7 @@ void * game_room(void *client_socket) {
       }
 
       syntax_valid = is_syntax_valid(player_two, buffer);
-
+      if (!syntax_valid) continue;
       translate_to_move(move, buffer); // Convert to move
 
       move_valid = is_move_valid(board, player_two, -1, move);
@@ -488,11 +525,93 @@ void * game_room(void *client_socket) {
   free_board(board);
 
 }
-
+int findNewRoom(){
+  int i;
+  for (i=0;i<numOfRoom;++i)
+    if (roomList[i]->state == -1)
+    return i;
+  return numOfRoom;
+}
+void* lobby(int playerID){
+  int player = playersList[playerID].socket;
+  char buffer[2048];
+  bzero(buffer,2048);
+  buffer[0] = '\0';
+  if (recv(player,buffer,1,0) <= 0){
+    printf("[-] Disconnected %d\n",player);
+    return;
+  };
+  printf("MESSAGE : %s\n",buffer);
+  if (buffer[0] == '1'){
+    send(player,getAllRoomInfor(),1000,0);
+    recv(player,buffer,9,0);
+    int roomID;
+    sscanf(buffer,"%d",&roomID);
+    roomdata* room = roomList[roomID];
+    join(room,playerID);
+    printf("Connected player %d, joining game room... %s\n",player,getInfor(room));
+    game_room(roomID);
+  } else if (buffer[0]=='2'){
+    int emptyRoom = findNewRoom();
+    free(roomList[emptyRoom]);
+    roomdata* newroom = (roomdata*) malloc(sizeof(roomdata));
+    clearroom(newroom);
+    newroom->roomID = emptyRoom;
+    join(newroom,playerID);
+    roomList[emptyRoom] = newroom;
+    if (emptyRoom+1>numOfRoom)
+      numOfRoom = emptyRoom+1;
+    sprintf(buffer,"%d",numOfRoom-1);
+    printf("Connected player %d, creating new game room...\n",player);
+    send(player,buffer,9,0);
+  }
+}
+void* login(void* client_socket){
+  int player = *(int *)client_socket;
+  char buffer[2048];
+  user data;
+  bzero(buffer, 2048);
+  int readfile;
+  while(readfile = recv(player, buffer,2048,0)>0){
+    if (readfile == -1){
+      printf("Client Disconnect!");
+      return client_socket;
+    }
+    data = convertStringtoData(buffer);
+    if (data.elo == -1){
+      data = getDataFromUserNameAndPassWord(data);
+      if (data.elo == -1){
+        send(player,"0",1,0);
+      }
+      else {
+        send(player,"1",1,0);
+        printf("Hello User!\n");
+        break;
+      }
+    } else {
+      int ok = addNewUser(data);
+      if (ok) {
+        send(player,"1",1,0);
+        sleep(2);
+        break;
+      } else {
+        send(player,"0",1,0);
+      }
+    }
+  }
+  //pthread_mutex_lock(&general_mutex); // Unecesary?
+     // Create thread if we have no user waiting
+  //printf("Player 1: %d",player_is_waiting);
+  data.socket = player;
+  int playerID = numOfPlayer;
+  playersList[playerID]  = data;
+  numOfPlayer++;
+  send(player,convertDatatoString(data),2048,0);
+  lobby(playerID);
+}
 int main( int argc, char *argv[] ) {
-  pthread_t tid[1];
   setlocale(LC_ALL, "en_US.UTF-8");
-
+  readData();
   int sockfd, client_socket, port_number, client_length;
   char buffer[64];
   struct sockaddr_in server_address, client;
@@ -523,11 +642,12 @@ int main( int argc, char *argv[] ) {
       perror("ERROR on binding");
       exit(1);
    }
-
+  numOfPlayer = 0;
+  numOfRoom   = 0;
           /* MAX_QUEUE */
   listen(sockfd, 20);
   printf("Server listening on port %d\n", port_number);
-
+  int count =0;
    while(1) {
      client_length = sizeof(client);
      // CHECK IF WE'VE A WAITING USER
@@ -540,23 +660,10 @@ int main( int argc, char *argv[] ) {
         perror("ERROR on accept");
         exit(1);
      }
-
-     pthread_mutex_lock(&general_mutex); // Unecesary?
-     // Create thread if we have no user waiting
-     if (player_is_waiting == 0) {
-       printf("Connected player, creating new game room...\n");
-       pthread_create(&tid[0], NULL, &game_room, &client_socket);
-       pthread_mutex_unlock(&general_mutex); // Unecesary?
-     }
+    count ++;
+    printf("ok\n");
+    pthread_create(&tid[count], NULL, &login, &client_socket);// Unecesary?
      // If we've a user waiting join that room
-     else {
-       // Send user two signal
-       printf("Connected player, joining game room... %d\n", client_socket);
-       challenging_player = client_socket;
-       pthread_mutex_unlock(&general_mutex); // Unecesary?
-       pthread_cond_signal(&player_to_join);
-     }
-
    }
 
    close(sockfd);
