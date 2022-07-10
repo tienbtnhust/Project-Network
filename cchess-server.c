@@ -407,7 +407,30 @@ bool is_move_valid(wchar_t ** board, int player, int team, int * move) {
   freeAll(piece_team, x_moves, y_moves);
   return true;
 }
-
+void calculateResult(user player1 , user player2, int state){
+  int eloDiff = player1.elo - player2.elo;
+  int bonus = eloDiff/25;
+  if (state < 0){ // Player 1 loses Player 2
+    player2.elo = player2.elo + 16;
+    player1.elo = player1.elo - 16;
+    if (bonus > 0) {
+      player2.elo += bonus;
+      player1.elo -= bonus;
+    }
+  } else if (state == 0) { // Hoa
+    player1.elo  -= bonus;
+    player2.elo  += bonus;
+  } else { // Player 1 Wins
+    player1.elo += 16;
+    player2.elo -= 16;
+    if (bonus <0) {
+      player1.elo -= bonus;
+      player2.elo += bonus
+    }
+  }
+  changeElo(player1);
+  changeElo(player2);
+}
 void * game_room(int roomID) {
   /* If connection is established then start communicating */
   roomdata* room = roomList[roomID];
