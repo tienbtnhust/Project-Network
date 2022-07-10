@@ -407,6 +407,11 @@ bool is_move_valid(wchar_t ** board, int player, int team, int * move) {
   freeAll(piece_team, x_moves, y_moves);
   return true;
 }
+/* Calculate Elo After Finish GAme
+   State = 0 : Draw 
+   State > 0 : PLayer 1 Wins
+   State < 0 : PLayer 2 Wins
+*/
 void calculateResult(user player1 , user player2, int state){
   int eloDiff = player1.elo - player2.elo;
   int bonus = eloDiff/25;
