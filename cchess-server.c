@@ -849,9 +849,11 @@ void calculateResult(int player1Id , int player2Id, int state){
   char buffer[64];
   bzero(buffer,64);
   sprintf(buffer,"%d",playersList[player1Id].elo - beforePlayer1Elo);
+  printf("Player 1 Elo Change : %s\n",buffer);
   send(playersList[player1Id].socket,buffer,64,0);
   bzero(buffer,64);
   sprintf(buffer,"%d",playersList[player2Id].elo - beforePlayer2Elo);
+  printf("Player 2 Elo Change : %s\n",buffer);
   send(playersList[player2Id].socket,buffer,64,0);
   changeElo(playersList[player1Id]);
   changeElo(playersList[player2Id]);
@@ -933,6 +935,25 @@ void * game_room(int roomID) {
         *winner  = -1;
         break;
       }
+      if (buffer[0] == 'd' && buffer[1] == 'r'){
+        send(player_two, "i-dr", 4, 0);
+        bzero(buffer, 64);
+        if ((n = read(player_two, buffer, 8)) < 0)
+        {
+          drawOrLose = 1;
+          *winner  = -1;
+          break;
+        }
+        if (buffer[0] == 'y' || buffer[0] == 'Y'){
+          drawOrLose = 1;
+          *winner =0;
+          break;
+        } else {
+          send(player_one, "i-tm", 4, 0);
+          send(player_two, "i-nm", 4, 0);
+          continue;
+        }
+      }
       buffer[n - 1] = 0;
       printf("Player one (%d) move: %s\n", player_one, buffer);
 
@@ -952,7 +973,9 @@ void * game_room(int roomID) {
       printf("Checking syntax and move validation (%d,%d)\n", syntax_valid, move_valid);
     }
     if (drawOrLose == 1) {
-      printf("Player one gives up\n!");
+      if (*winner == -1) printf("Player one gives up\n!");
+      else if (*winner == 1) printf("Player two gives up\n!");
+      else printf("DRAW!\n");
       break;
     }
 
@@ -989,13 +1012,32 @@ void * game_room(int roomID) {
         //perror("ERROR reading from socket");//
         //exit(1);
         drawOrLose = 1;
-        *winner  = -1;
+        *winner  = 1;
         break;
       }
       if (buffer[0] == 'l' && buffer[1] == 'o'){
         drawOrLose = 1;
-        *winner  = -1;
+        *winner  = 1;
         break;
+      }
+      if (buffer[0] == 'd' && buffer[1] == 'r'){
+        send(player_one, "i-dr", 4, 0);
+        bzero(buffer, 64);
+        if ((n = read(player_one, buffer, 8)) < 0)
+        {
+          drawOrLose = 1;
+          *winner  = 1;
+          break;
+        }
+        if (buffer[0] == 'y' || buffer[0] == 'Y'){
+          drawOrLose = 1;
+          *winner =0;
+          break;
+        } else {
+          send(player_one, "i-nm", 4, 0);
+          send(player_two, "i-tm", 4, 0);
+          continue;
+        }
       }
       buffer[n - 1] = 0;
       printf("Player two (%d) move: %s\n", player_two, buffer);
@@ -1016,7 +1058,9 @@ void * game_room(int roomID) {
       printf("Checking syntax and move validation (%d,%d)\n", syntax_valid, move_valid);
     }
     if (drawOrLose == 1) {
-      printf("Player two gives up\n!");
+      if (*winner == -1) printf("Player one gives up\n!");
+      else if (*winner == 1) printf("Player two gives up\n!");
+      else printf("DRAW!\n");
       break;
     }
     printf("Player two (%d) made move\n", player_two);
@@ -1047,11 +1091,15 @@ void * game_room(int roomID) {
     send(player_two, "i-ol", 4, 0);
     calculateResult(room->player_is_waiting,room->challenging_player,1);
   }
-  else
+  else if (*winner == -1)
   {
     send(player_one, "i-ol", 4, 0);
     send(player_two, "i-ow", 4, 0);
     calculateResult(room->player_is_waiting,room->challenging_player,-1);
+  } else {
+    send(player_one, "i-od", 4, 0);
+    send(player_two, "i-od", 4, 0);
+    calculateResult(room->player_is_waiting,room->challenging_player,0);
   }
 
   /* delete board and related things */

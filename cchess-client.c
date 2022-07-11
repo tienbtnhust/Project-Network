@@ -69,6 +69,8 @@ void *on_signal(void *sockfd)
           else if (buffer[3] == 'l')
           {
             printf("You LOSE! =(\n");
+          } else if (buffer[3] == 'd'){
+            printf("DRAW! \n");
           }
           bzero(buffer,64);
           n = read(socket, buffer, 64);
@@ -80,10 +82,13 @@ void *on_signal(void *sockfd)
           int eloChange;
           sscanf(buffer,"%d",&eloChange);
           if (eloChange >=  0){
-          printf("Your Elo + %d\n",eloChange);
+          printf("Your Elo +%d\n",eloChange);
           } else
           printf("Your Elo %d \n",eloChange);
           return;
+        }
+        if (buffer[2] == 'd'){
+          printf("Your Opponent want to draw. Do you accept? (y/Y for Yes, others for No)!\n");
         }
       }
       else if (buffer[0] == 'e')
