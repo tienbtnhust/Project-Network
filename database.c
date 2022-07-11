@@ -23,7 +23,8 @@ void appendData(user newUser){
 void saveData(){
     FILE* f = fopen("userdata.txt","w");
     for (int i=0;i<numUsers;++i){
-        fprintf(f,"%s\n",convertDatatoString(Data[i]));
+        fprintf(f,"%s",convertDatatoString(Data[i]));
+        if (i<numUsers-1) fprintf(f,"\n");
         //printf("%d-%s\n",i,convertDatatoString(Data[i]));
         //printf("%d - %s\n",i,convertDatatoString(Data[i]));
     }

@@ -1042,13 +1042,16 @@ void * game_room(int roomID) {
   free(winner);
   free_board(board);
   count ++;
+  int playerOneId = room->player_is_waiting;
   pthread_create(&tid[count], NULL, &ReturnToLobby, room);
-  lobby(room->player_is_waiting);
+  lobby(playerOneId);
 }
 void* ReturnToLobby(void* room){
   roomdata* dataRoom = (roomdata*) room;
   //printf("DON\' SEND DATA ERROR : %d\n",dataRoom->challenging_player);
-  lobby(dataRoom->challenging_player);
+  int playerID = dataRoom->challenging_player;
+  clearroom(dataRoom);
+  lobby(playerID);
 }
 int findNewRoom(){
   int i;
