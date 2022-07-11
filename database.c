@@ -24,11 +24,14 @@ void saveData(){
     FILE* f = fopen("userdata.txt","w");
     for (int i=0;i<numUsers;++i){
         fprintf(f,"%s\n",convertDatatoString(Data[i]));
+        //printf("%d-%s\n",i,convertDatatoString(Data[i]));
         //printf("%d - %s\n",i,convertDatatoString(Data[i]));
     }
     fclose(f);
 }
 void changeElo(user loginData){
+    printf("NumUsers = %d\n",numUsers);
+
     for (int i=0;i<numUsers;++i){
         user userData = Data[i];
         if (strcmp(userData.username,loginData.username) == 0 && strcmp(userData.password,loginData.password) ==0)
