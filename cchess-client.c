@@ -40,7 +40,7 @@ void *on_signal(void *sockfd)
       {
         if (buffer[2] == 't')
         {
-          printf("\nMake your move: \n");
+          printf("\nMake your move: (lose -> Give Up)\n");
         }
         if (buffer[2] == 'n')
         {
