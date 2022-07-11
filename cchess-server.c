@@ -9,7 +9,7 @@
 #include <signal.h>
 #include "database.c"
 #include "board.c"
-#define PORT 7000;
+#define PORT 6000;
 typedef struct roomdata {
   int roomID ;
   int player_is_waiting;
@@ -860,6 +860,8 @@ void * game_room(int roomID) {
   *castle_2 = 1;
   int *winner = (int *)malloc(sizeof(int));
   *winner = 0;
+
+  int drawOrLose = 0;
   // TODO lock assigning player mutex
   player_two = playersList[room->challenging_player].socket; // Asign the player_two to challenging_player
   printf("Room %d :\nPlayer One: %d\nPlayer Two: %d\n",roomID,player_one,room->challenging_player);
@@ -901,8 +903,16 @@ void * game_room(int roomID) {
 
       if ((n = read(player_one, buffer, 8)) < 0)
       {
-        perror("ERROR reading from socket");
-        exit(1);
+        //perror("ERROR reading from socket");//
+        //exit(1);
+        drawOrLose = 1;
+        *winner  = -1;
+        break;
+      }
+      if (buffer[0] == 'l' && buffer[1] == 'o'){
+        drawOrLose = 1;
+        *winner  = -1;
+        break;
       }
       buffer[n - 1] = 0;
       printf("Player one (%d) move: %s\n", player_one, buffer);
@@ -921,6 +931,10 @@ void * game_room(int roomID) {
       }
 
       printf("Checking syntax and move validation (%d,%d)\n", syntax_valid, move_valid);
+    }
+    if (drawOrLose == 1) {
+      printf("Player one gives up\n!");
+      break;
     }
 
     printf("Player one (%d) made move\n", player_one);
@@ -951,11 +965,18 @@ void * game_room(int roomID) {
     while (!syntax_valid || !move_valid)
     {
       bzero(buffer, 64);
-
       if ((n = read(player_two, buffer, 8)) < 0)
       {
-        perror("ERROR reading from socket");
-        exit(1);
+        //perror("ERROR reading from socket");//
+        //exit(1);
+        drawOrLose = 1;
+        *winner  = -1;
+        break;
+      }
+      if (buffer[0] == 'l' && buffer[1] == 'o'){
+        drawOrLose = 1;
+        *winner  = -1;
+        break;
       }
       buffer[n - 1] = 0;
       printf("Player two (%d) move: %s\n", player_two, buffer);
@@ -974,6 +995,10 @@ void * game_room(int roomID) {
       }
 
       printf("Checking syntax and move validation (%d,%d)\n", syntax_valid, move_valid);
+    }
+    if (drawOrLose == 1) {
+      printf("Player two gives up\n!");
+      break;
     }
     printf("Player two (%d) made move\n", player_two);
 

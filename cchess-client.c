@@ -307,7 +307,7 @@ void playGame(int sockfd){
      bzero(buffer, 64);
      fgets(buffer, 64, stdin);
      /* Send message to the server */
-     if (isGameOver == 0){
+     if (isGameOver == 0 && buffer[0] != '\n' && buffer[0] != ' '){
       n = write(sockfd, buffer, strlen(buffer));
      if (n < 0) {
         perror("ERROR writing to socket");
