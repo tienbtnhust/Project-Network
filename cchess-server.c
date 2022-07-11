@@ -9,7 +9,7 @@
 #include <signal.h>
 #include "database.c"
 #include "board.c"
-#define PORT 8000;
+#define PORT 7000;
 typedef struct roomdata {
   int roomID ;
   int player_is_waiting;
@@ -59,7 +59,7 @@ char* getAllRoomInfor(){
   char * allInfor = (char*) malloc(sizeof(char) * 1000);
   for (i=0;i<numOfRoom;++i){
     roomdata* room = roomList[i];
-    if (room->state != -1){
+    if (room->state == 0){
       char* infor = getInfor(room);
       strcat(allInfor,infor);
       free(infor);
