@@ -15,6 +15,8 @@
 #define RESET "\x1B[0m"
 #define GREEN  "\x1B[32m"
 int isGameOver;
+int readyRoomIDList[1000];
+int numOfReadyRoom;
 void playGame(int sockfd);
 void *on_signal(void *sockfd)
 {
@@ -262,6 +264,39 @@ void *on_signal(void *sockfd)
 
   // pthread_exit(NULL);
 }
+void getReadyRoomID(char buffer[]){
+  int hasNum =0;
+  numOfReadyRoom =0;
+  int num =0;
+  for (int i =0;i<strlen(buffer);++i)
+    if (isdigit(buffer[i])){
+      num = num*10 + (buffer[i] - buffer[0]);
+      hasNum = 1;
+    } else if (hasNum == 1) {
+      readyRoomIDList[numOfReadyRoom++] = num;
+      //printf("READY : %d\n",num);
+      num =0;
+      hasNum = 0;
+    }
+}
+int checkHasInArray(int roomID){
+  int res = -1;
+  int front = 0;
+  int end = numOfReadyRoom -1;
+  while (front <= end) {
+    int mid = (front + end) /2;
+    if (readyRoomIDList[mid] <roomID) {
+      front = mid +1;
+    } else if (readyRoomIDList[mid] > roomID){
+      end = mid -1;
+    } else if (readyRoomIDList[mid] == roomID){
+      res = mid;
+      break;
+    }
+  }
+  if (res == -1) return 0;
+  return 1;
+}
 void CreateRoom(int sockfd){
   char buffer[10];
   recv(sockfd,buffer,9,0);
@@ -278,9 +313,14 @@ void JoinRoom(int sockfd){
     CreateRoom(sockfd);
     return;
   }
+  getReadyRoomID(buffer);
   printf("Room List:\n%s",buffer);
-  int roomID;
-  scanf("%d",&roomID);
+  int roomID = -1;
+  while (checkHasInArray(roomID) == 0)
+  {
+    printf("Enter Room ID:\n");
+    scanf("%d",roomID);
+  }
   sprintf(buffer,"%d",roomID);
   send(sockfd,buffer,9,0);
   printf("Start Playing \n");

@@ -9,7 +9,7 @@
 #include <signal.h>
 #include "database.c"
 #include "board.c"
-#define PORT 7000;
+#define PORT 8000;
 typedef struct roomdata {
   int roomID ;
   int player_is_waiting;
