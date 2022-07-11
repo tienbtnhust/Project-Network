@@ -67,6 +67,16 @@ char* getAllRoomInfor(){
   }
   return allInfor;
 }
+bool checkAnyReadyRoom(){
+  for (int i=0;i<numOfRoom;++i)
+  for (i=0;i<numOfRoom;++i){
+    roomdata* room = roomList[i];
+    if (room->state == 0){
+      return true;
+    }
+  }
+  return false;
+}
 
 bool emit(int client, char *message, int message_size)
 {
@@ -1092,7 +1102,7 @@ void joinRoom(int playerID){
   char buffer[2048];
   bzero(buffer,2048);
   buffer[0] = '\0';
-  if (numOfRoom == 0){
+  if (!checkAnyReadyRoom()){
     buffer[0] = 'n';
     buffer[1] = '\0';
     send(player,buffer,2048,0);

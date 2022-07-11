@@ -268,7 +268,7 @@ void JoinRoom(int sockfd){
   char buffer[2048];
   recv(sockfd,buffer,2048,0);
   if (buffer[0] == 'n'){
-    printf("There are no room exists!\n");
+    printf("There are no room ready!\n");
     printf("Automatically create new room\n");
     CreateRoom(sockfd);
     return;
