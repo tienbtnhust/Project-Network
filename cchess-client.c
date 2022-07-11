@@ -70,7 +70,19 @@ void *on_signal(void *sockfd)
           {
             printf("You LOSE! =(\n");
           }
-
+          bzero(buffer,64);
+          n = read(socket, buffer, 64);
+          if (n < 0)
+          {
+            perror("[-] Disconnected Server!");
+            exit(1);
+          }
+          int eloChange;
+          sscanf(buffer,"%d",&eloChange);
+          if (eloChange >=  0){
+          printf("Your Elo + %d\n",eloChange);
+          } else
+          printf("Your Elo %d \n",eloChange);
           return;
         }
       }
@@ -253,8 +265,14 @@ void CreateRoom(int sockfd){
   playGame(sockfd);
 }
 void JoinRoom(int sockfd){
-  char buffer[1000];
-  recv(sockfd,buffer,1000,0);
+  char buffer[2048];
+  recv(sockfd,buffer,2048,0);
+  if (buffer[0] == 'n'){
+    printf("There are no room exists!\n");
+    printf("Automatically create new room\n");
+    CreateRoom(sockfd);
+    return;
+  }
   printf("Room List:\n%s",buffer);
   int roomID;
   scanf("%d",&roomID);
@@ -281,7 +299,7 @@ void Lobby(int sockfd){
   int readsize;
   char buffer[2048];
   readsize = recv(sockfd, buffer,2048,0);
-  if (readsize == -1){
+  if (readsize < 0){
     printf("[-] Disconnect\n");
     exit(0);
   }

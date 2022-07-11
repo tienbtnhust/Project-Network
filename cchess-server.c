@@ -816,6 +816,8 @@ bool is_game_over(wchar_t **board, int *winner)
 void calculateResult(int player1Id , int player2Id, int state){
   int eloDiff = playersList[player1Id].elo - playersList[player2Id].elo;
   int bonus = eloDiff/25;
+  int beforePlayer1Elo =  playersList[player1Id].elo;
+  int beforePlayer2Elo =  playersList[player2Id].elo;
   if (state < 0){ // Player 1 loses Player 2
     playersList[player2Id].elo = playersList[player2Id].elo + 16;
     playersList[player1Id].elo = playersList[player1Id].elo - 16;
@@ -834,6 +836,13 @@ void calculateResult(int player1Id , int player2Id, int state){
       playersList[player2Id].elo += bonus;
     }
   }
+  char buffer[64];
+  bzero(buffer,64);
+  sprintf(buffer,"%d",playersList[player1Id].elo - beforePlayer1Elo);
+  send(playersList[player1Id].socket,buffer,64,0);
+  bzero(buffer,64);
+  sprintf(buffer,"%d",playersList[player2Id].elo - beforePlayer2Elo);
+  send(playersList[player2Id].socket,buffer,64,0);
   changeElo(playersList[player1Id]);
   changeElo(playersList[player2Id]);
 }
@@ -1060,6 +1069,48 @@ int findNewRoom(){
     return i;
   return numOfRoom;
 }
+void createRoom(int playerID){
+  int player = playersList[playerID].socket;
+  //
+  char buffer[64];
+  bzero(buffer,64);
+  int emptyRoom = findNewRoom();
+  free(roomList[emptyRoom]);
+  roomdata* newroom = (roomdata*) malloc(sizeof(roomdata));
+  clearroom(newroom);
+  newroom->roomID = emptyRoom;
+  join(newroom,playerID);
+  roomList[emptyRoom] = newroom;
+  if (emptyRoom+1>numOfRoom)
+  numOfRoom = emptyRoom+1;
+  sprintf(buffer,"%d",emptyRoom);
+  printf("Connected player %d, creating new game room...\n",player);
+  send(player,buffer,9,0);
+}
+void joinRoom(int playerID){
+  int player = playersList[playerID].socket;
+  char buffer[2048];
+  bzero(buffer,2048);
+  buffer[0] = '\0';
+  if (numOfRoom == 0){
+    buffer[0] = 'n';
+    buffer[1] = '\0';
+    send(player,buffer,2048,0);
+    createRoom(playerID);
+    return;
+  }
+  send(player,getAllRoomInfor(),2048,0);
+  if (recv(player,buffer,9,0) <= 0){
+  printf("[-] Disconnected %d\n",player);
+  return;
+  };
+  int roomID;
+  sscanf(buffer,"%d",&roomID);
+  roomdata* room = roomList[roomID];
+  join(room,playerID);
+  printf("Connected player %d, joining game room... %s\n",player,getInfor(room));
+  game_room(roomID);
+}
 void* lobby(int playerID){
   int player = playersList[playerID].socket;
   user data = playersList[playerID];
@@ -1074,27 +1125,9 @@ void* lobby(int playerID){
   };
   printf("MESSAGE : %s\n",buffer);
   if (buffer[0] == '1'){
-    send(player,getAllRoomInfor(),1000,0);
-    recv(player,buffer,9,0);
-    int roomID;
-    sscanf(buffer,"%d",&roomID);
-    roomdata* room = roomList[roomID];
-    join(room,playerID);
-    printf("Connected player %d, joining game room... %s\n",player,getInfor(room));
-    game_room(roomID);
+    joinRoom(playerID);
   } else if (buffer[0]=='2'){
-    int emptyRoom = findNewRoom();
-    free(roomList[emptyRoom]);
-    roomdata* newroom = (roomdata*) malloc(sizeof(roomdata));
-    clearroom(newroom);
-    newroom->roomID = emptyRoom;
-    join(newroom,playerID);
-    roomList[emptyRoom] = newroom;
-    if (emptyRoom+1>numOfRoom)
-      numOfRoom = emptyRoom+1;
-    sprintf(buffer,"%d",numOfRoom-1);
-    printf("Connected player %d, creating new game room...\n",player);
-    send(player,buffer,9,0);
+    createRoom(playerID);
   }
 }
 void* login(void* client_socket){

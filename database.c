@@ -17,7 +17,8 @@ void readData(){
 }
 void appendData(user newUser){
     FILE* f = fopen("userdata.txt","a");
-    fprintf(f,"%s\n",convertDatatoString(newUser));
+    if (numUsers > 0) fprintf(f,"\n");
+    fprintf(f,"%s",convertDatatoString(newUser));
     fclose(f);
 }
 void saveData(){
