@@ -9,7 +9,7 @@
 #include <signal.h>
 #include "database.c"
 #include "board.c"
-#define PORT 8000;
+#define PORT 7000;
 typedef struct roomdata {
   int roomID ;
   int player_is_waiting;
@@ -1159,8 +1159,9 @@ void joinRoom(int playerID){
   }
   send(player,getAllRoomInfor(),2048,0);
   if (recv(player,buffer,9,0) <= 0){
-  printf("[-] Disconnected %d\n",player);
-  return;
+    playersList[playerID].socket = -1;
+    printf("[-] Disconnected %d\n",player);
+    return;
   };
   int roomID;
   sscanf(buffer,"%d",&roomID);
@@ -1179,6 +1180,7 @@ void* lobby(int playerID){
   buffer[0] = '\0';
   if (recv(player,buffer,1,0) <= 0){
     printf("[-] Disconnected %d\n",player);
+    playersList[playerID].socket = -1;
     return;
   };
   printf("MESSAGE : %s\n",buffer);
@@ -1187,6 +1189,16 @@ void* lobby(int playerID){
   } else if (buffer[0]=='2'){
     createRoom(playerID);
   }
+}
+int checkIsLogin(user Data){
+  int i;
+  for (i=0;i<numOfPlayer;++i){
+    user Player = playersList[i];
+    if (strcmp(Data.username,Player.username)==0 && Player.socket != -1){
+      return 0;
+    }
+  }
+  return 1;
 }
 void* login(void* client_socket){
   int player = *(int *)client_socket;
@@ -1202,7 +1214,7 @@ void* login(void* client_socket){
     data = convertStringtoData(buffer);
     if (data.elo == -1){
       data = getDataFromUserNameAndPassWord(data);
-      if (data.elo == -1){
+      if (data.elo == -1 || checkIsLogin(data) == 0){
         send(player,"0",1,0);
       }
       else {

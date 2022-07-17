@@ -319,8 +319,9 @@ void JoinRoom(int sockfd){
   while (checkHasInArray(roomID) == 0)
   {
     printf("Enter Room ID:\n");
-    scanf("%d",roomID);
+    scanf("%d",&roomID);
   }
+  bzero(buffer,2048);
   sprintf(buffer,"%d",roomID);
   send(sockfd,buffer,9,0);
   printf("Start Playing \n");
