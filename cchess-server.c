@@ -57,6 +57,7 @@ char* getInfor(roomdata * room){
 char* getAllRoomInfor(){
   int i;
   char * allInfor = (char*) malloc(sizeof(char) * 1000);
+  bzero(allInfor,1000);
   for (i=0;i<numOfRoom;++i){
     roomdata* room = roomList[i];
     if (room->state == 0){
